@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- 🔥 WICHTIG für Smartphone -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <title>Leipzig Bound</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 10px;
+      margin: 0;
+      background: #f5f5f5;
+    }
+
+    #app {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 70px 15px 15px 15px; /* nur einmal sauber */
+      border-radius: 10px;
+    }
+
+    #hintBtn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      padding: 10px 14px;
+      font-size: 16px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    button {
+      display: block;
+      margin: 10px auto;
+      padding: 14px;
+      width: 100%;
+      font-size: 18px;
+      border-radius: 8px;
+    }
+
+    input[type="text"] {
+      font-size: 18px;
+      padding: 10px;
+    }
+
+    button.correct-selected {
+      background: #cfffe6 !important;
+    }
+
+    button.wrong-selected {
+      background: #ffb3b3 !important;
+    }
+
+    .check-btn {
+      background: #2d6cdf;
+      color: white;
+      font-weight: bold;
+      border: none;
+    }
+
+    .check-btn:hover {
+    background: #1f4fb3;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<button id="hintBtn" style="position:fixed; top:10px; right:10px; padding:10px 14px; font-size:16px;">
+💡 Möchtest du einen Tipp?
+</button>
+
+<div id="hintBox" style="display:none; position:fixed; bottom:10px; left:10px; right:10px; background:#fff3cd; border:1px solid #ffeeba; padding:12px; border-radius:8px; font-size:16px;">
+</div>
+
+<div id="app"></div>
+
+
+
+
+<script>
+let current = 0;
+let score = 0;
+
+let selected = [];
+let attempts = 0;
+let locked = false;
+let currentHint = null;
+
+
+const hintBtn = document.getElementById("hintBtn");
+const hintBox = document.getElementById("hintBox");
+
+
+if (currentHint) {
+  hintBtn.style.display = "block";
+} else {
+  hintBtn.style.display = "none";
+  hintBox.style.display = "none";
+}
+
+hintBtn.onclick = () => {
+  if (!currentHint) return;
+
+  hintBox.style.display = "block";
+  hintBox.innerHTML = "💡 Tipp: " + currentHint;
+};
+
+const data = [
+  {
+    type: "info",
+    image: "1.gif",
+    text: `<h2>Schön, dass du da bist!</h2> 
+    
+In diesem spannenden Actionbound-Quiz gehst du auf Entdeckungsreise durch unsere Dauerausstellung. 
+🕵️‍♀️ Du wirst faszinierende Dinge über Bücher, das Schreiben und alte Schriften entdecken – von Federkiel bis Digitalzeit. 
+✍️📱 Wusstest du, dass das Smartphone in deiner Hand eine ganz moderne Fortsetzung jahrtausendealter Schreibtraditionen ist? 
+⏱️ Keine Sorge: Deine Reise dauert nur etwa 30 Minuten. Los geht’s – viel Spaß!`
+  },
+
+  {
+    type: "quiz",
+    text: `📜 Wie alles begann – ganz ohne Schrift!`,
+    image: "2.jpg",
+    question: "Wofür wurden die Ketten benutzt?",
+    answers: [
+      "Schmuck",
+      "Legitimation von Botschaften",
+      "Erinnerungsstütze",
+      "Währung",
+      "Rituale"
+    ],
+    correct: [1, 2],
+    hint: "2 Antworten sind korrekt"
+  },
+
+  {
+    type: "info",
+    text: `<h1>🗿 Geschichten aus Stein?</h1>
+    <br>
+    <br>
+    Ja, wirklich! Bevor es Bücher gab, haben Menschen ihre Geschichten ganz anders erzählt. <br>
+    Im Eingangsbereich des Museums seht ihr einen assyrischen Obelisken! <br>
+    In diesen Stein wurden Bilder und Zeichen eingeritzt – fast wie ein Comic aus der Steinzeit!`
+  },
+
+  {
+    type: "quiz",
+    text: `Woher kommt eigentlich unser Alphabet?<br>
+   <br>
+   Das Alphabet, das wir heute benutzen, ist schon richtig alt – und es hat eine spannende Geschichte! <br>
+  📚 Wir alle lernen die Buchstaben in der Schule und benutzen sie jeden Tag – beim Lesen, Schreiben oder Chatten.<br>
+   <br>
+  Aber wusstest du, dass es viele, viele Jahre gebraucht hat, bis unser Alphabet so aussah wie heute?<br>
+  🤔 Hast du eine Idee, wo es ursprünglich herkommt?`,
+    question: "Woher kommt unser Alphabet ursprünglich?",
+    answers: [
+      "Von den Griechen",
+      "Von den Ägyptern",
+      "Von den Phöniziern",
+      "Von den Maya"
+    ],
+    correct: [2]
+  },
+
+  {
+  type: "true_false",
+  question: "Die Himmelsscheibe von Nebra ist über 5000 Jahre alt.",
+  correct: true   // oder false
+  },
+
+  {
+    type: "ltext",
+    text: `<h2>🌟 Die erste „Himmelskarte“!</h2><br>
+Bevor es Karten und Kalender gab, mussten die Menschen sich anders behelfen. Eines dieser alten „Zeitdokumente“ ist die Himmelsscheibe von Nebra, die ihr in der Vitrine vor euch seht. 🪐
+Sie ist eine der ersten Darstellungen des Sternenhimmels und wurde auch als Kalender genutzt! <br>
+📅 Auf der Scheibe kann man die Sonne, den Mond und viele Sterne sehen.`,
+    question: "Kannst du zählen, wie viele Sterne insgesamt abgebildet sind?",
+    image: "4.gif",
+    correct: ["30", "dreißig", "dreissig"]
+  },
+
+  {
+  type: "cloze_letters",
+  text: `<h2>Wo werden diese Schätze in Leipzig gesammelt?</h2> <br>
+  <br>  Deutsches ____ - und<br> ____museum`,
+  answers: ["Buch", "Schrift"]
+  },
+
+  {
+    type: "timeline",
+    text: "Wann wurde der Buchdruck erfunden?",
+    question: "Schätze das Jahr:",
+    min: 0,
+    max: 2000,
+    correct: 1440,
+    tolerance: 100
+  },
+
+  
+  {
+    type: "sort",
+    question: "Sortiere die Entwicklung der Schrift:",
+    items: [
+      "Höhlenmalerei",
+      "Hieroglyphen",
+      "Alphabet",
+      "Buchdruck"
+    ],
+    correct: [0, 1, 2, 3]
+  },
+ 
+ {
+  type: "multi_select",
+  text: "Welche dieser Dinge gehören zur Schriftgeschichte? - Antwortmöglichkeiten finigert nur zum Test der Mechanik",
+  answers: [
+    "10.jpg",
+    "11.jpg",
+    "12.jpg",
+    "13.jpg",
+    "14.jpg",
+    "15.jpg"
+  ],
+  correct: [0,1,2]
+},
+
+];
+
+function resetState() {
+  selected = [];
+  attempts = 0;
+  locked = false;
+}
+
+function evaluate(item) {
+  if (item.type !== "quiz") return "wrong";
+
+  const correct = item.correct;
+
+  const hasWrong = selected.some(i => !correct.includes(i));
+  const missingCorrect = correct.some(i => !selected.includes(i));
+
+  if (missingCorrect) return "wrong";
+  if (hasWrong) return "partial";
+  return "perfect";
+}
+
+function getMaxAttempts(item) {
+  if (item.type === "quiz") return item.correct.length + 1;
+  if (item.type === "ltext") return 2;
+  if (item.type === "timeline") return 2;
+  return 1;
+}
+
+function next() {
+  current++;
+  resetState();
+  render();
+}
+
+function showEnd() {
+  const shareText = `Ich habe ${score} Punkte im Leipzig Bound Quiz geschafft! 🎉`;
+
+  app.innerHTML = `
+    <div style="
+      text-align:center;
+      padding: 20px;
+    ">
+
+      <h2>🎉 Fertig!</h2>
+
+      <!-- ⭐ SCORE HERO -->
+      <div style="
+        font-size: 52px;
+        font-weight: bold;
+        color: #2d6cdf;
+        margin: 20px 0;
+      ">
+        ${score} Punkte
+      </div>
+
+      <p>Vielen Dank fürs Mitspielen!<br>Probiere auch unsere anderen Schnitzeljagden aus :)</p>
+
+      <hr style="margin:20px 0;">
+
+      <p><b>Folge uns:</b></p>
+
+      <div style="
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      font-size: 18px;
+    ">
+
+        <a href="https://www.instagram.com/deutschenationalbibliothek/" target="_blank">📷 Instagram Deutsche Nationalbibliothek</a>
+
+        <a href="https://www.instagram.com/buchundschriftmuseum" target="_blank">🏛️ Instagram Deutsches Buch- und Schriftmuseum</a>
+
+        <a href="https://www.linkedin.com/company/deutsche-nationalbibliothek" target="_blank">💼 Linkin</a>
+
+        <a href="https://blog.dnb.de/" target="_blank">📝 Blog der Deutschen Nationalbibliothe</a>
+
+      </div>
+
+    </div>
+  `;
+}
+
+function showFeedback(result, points) {
+  let msg = "";
+
+  if (result === "perfect") msg = "🟢 Perfekt!";
+  if (result === "partial") msg = "🟡 Ein kleiner Fehler war dabei, daher halbe Punktzahl";
+
+  app.innerHTML = `
+    <h2>${msg}</h2>
+    <p>Punkte: ${points}</p>
+    <button onclick="next()">Weiter</button>
+  `;
+}
+
+function showPartialFeedback(item, points, explanation) {
+  app.innerHTML = `
+    <div style="text-align:center; padding:20px;">
+
+      <h2>🟡 Fast richtig!</h2>
+
+      <p style="font-size:18px;">
+        ${explanation}
+      </p>
+
+      <div style="font-size:40px; font-weight:bold; margin:20px 0;">
+        ${points} Punkte
+      </div>
+
+      <hr>
+
+      <h3>✔️ Richtige Lösung:</h3>
+      <p><b>${item.correct}</b></p>
+
+      <button onclick="next()" class="check-btn">Weiter</button>
+
+    </div>
+  `;
+}
+
+function showSolution(item) {
+  let content = "<h2>❌ Lösung</h2>";
+
+  if (item.type === "quiz") {
+    content += "<p>Richtig waren:</p><ul>";
+    content += item.answers.map((a, i) =>
+      item.correct.includes(i) ? `<li>✅ ${a}</li>` : ""
+    ).join("");
+    content += "</ul>";
+  }
+  else if (item.type === "multi_select") {
+
+  app.innerHTML = "<h2>❌ Lösung</h2><p>Richtige Antworten:</p>";
+
+  const grid = document.createElement("div");
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+  grid.style.gap = "10px";
+
+  item.answers.forEach((imgSrc, i) => {
+    if (item.correct.includes(i)) {
+
+      const img = document.createElement("img");
+      img.src = imgSrc;
+
+      img.style.width = "100%";
+      img.style.aspectRatio = "1 / 1";
+      img.style.objectFit = "cover";
+      img.style.borderRadius = "8px";
+      img.style.border = "2px solid #4caf50";
+
+      grid.appendChild(img);
+    }
+  });
+
+  app.appendChild(grid);
+
+  const btn = document.createElement("button");
+  btn.textContent = "Weiter";
+  btn.onclick = next;
+  app.appendChild(btn);
+
+  return; // ❗ GANZ WICHTIG → verhindert doppelte Ausgabe
+}
+
+  else if (item.type === "ltext") {
+    content += `<p>Richtige Antwort: <b>${item.correct}</b></p>`;
+  }
+
+  else if (item.type === "timeline") {
+  content = `
+    <h2>Deine Schätzung war leider nicht ganz richtig.</h2>
+    <p><b>Richtige Antwort:</b> ${item.correct}</p>`;
+
+  }
+  else if (item.type === "sort") {
+  content += "<p>Richtige Reihenfolge:</p><ol>";
+
+  const correctOrder = item.correct.map(i => item.items[i]);
+
+  content += correctOrder.map(item => `<li>✅ ${item}</li>`).join("");
+
+  content += "</ol>";
+}
+
+  content += `<button onclick="next()">Weiter</button>`;
+  app.innerHTML = content;
+}
+
+function shuffle(array) {
+  let arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function render() {
+  if (!data[current]) {
+    showEnd();
+    return;
+  }
+
+  app.innerHTML = "";
+
+  const item = data[current];
+
+  currentHint = item.hint || null;
+
+  const hintBtn = document.getElementById("hintBtn");
+  const hintBox = document.getElementById("hintBox");
+
+  if (currentHint) {
+    hintBtn.style.display = "block";
+  } else {
+    hintBtn.style.display = "none";
+    hintBox.style.display = "none";
+  }
+
+  const container = document.createElement("div");
+
+  if (item.text && item.type !== "cloze_letters") {
+    const t = document.createElement("p");
+    t.innerHTML = item.text;
+    container.appendChild(t);
+  }
+
+  if (item.image) {
+    const img = document.createElement("img");
+    img.src = item.image;
+    img.style.maxWidth = "100%";
+    container.appendChild(img);
+  }
+
+  if (item.type === "info") {
+    const btn = document.createElement("button");
+    btn.textContent = "Weiter";
+    btn.onclick = next;
+    container.appendChild(btn);
+  }
+  if (item.type === "true_false") {
+
+  const q = document.createElement("h2");
+  q.textContent = item.question;
+  container.appendChild(q);
+
+  let answered = false;
+
+  const trueBtn = document.createElement("button");
+  trueBtn.textContent = "Wahr";
+
+  const falseBtn = document.createElement("button");
+  falseBtn.textContent = "Falsch";
+
+  function lockAll() {
+    trueBtn.disabled = true;
+    falseBtn.disabled = true;
+  }
+
+  trueBtn.onclick = () => {
+    if (locked || answered) return;
+
+    answered = true;
+    locked = true;
+
+    if (item.correct === true) {
+      trueBtn.style.background = "#cfe8ff";
+      score += 1;
+      showFeedback("perfect", 1);
+    } else {
+      trueBtn.style.background = "#ffb3b3";
+      showSolution(item);
+    }
+
+    lockAll();
+  };
+
+  falseBtn.onclick = () => {
+    if (locked || answered) return;
+
+    answered = true;
+    locked = true;
+
+    if (item.correct === false) {
+      falseBtn.style.background = "#cfe8ff";
+      score += 1;
+      showFeedback("perfect", 1);
+    } else {
+      falseBtn.style.background = "#ffb3b3";
+      showSolution(item);
+    }
+
+    lockAll();
+  };
+
+  container.appendChild(trueBtn);
+  container.appendChild(falseBtn);
+}
+  
+  // 🖼️ MultiSelect mit Bildern
+if (item.type === "multi_select") {
+
+  const q = document.createElement("h2");
+  q.textContent = item.question;
+  container.appendChild(q);
+
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "grid";
+  wrapper.style.gridTemplateColumns = "repeat(2, 1fr)";
+  wrapper.style.gap = "12px";
+
+  item.answers.forEach((imgSrc, index) => {
+
+    const img = document.createElement("img");
+    img.src = imgSrc;
+
+    img.style.width = "100%";
+    img.style.aspectRatio = "1 / 1";
+    img.style.objectFit = "cover";
+    img.style.cursor = "pointer";
+    img.style.border = "3px solid transparent";
+    img.style.borderRadius = "10px";
+    img.style.transform = "scale(1.03)";
+
+    img.onclick = () => {
+      if (locked) return;
+
+      if (selected.includes(index)) {
+        selected = selected.filter(i => i !== index);
+        img.style.border = "3px solid transparent";
+      } else {
+        selected.push(index);
+        img.style.border = "3px solid #2196f3";
+      }
+    };
+
+    // Hover
+    img.onmouseover = () => {
+      if (!selected.includes(index)) {
+        img.style.border = "3px solid #90caf9";
+      }
+    };
+
+    img.onmouseout = () => {
+      if (!selected.includes(index)) {
+        img.style.border = "3px solid transparent";
+      }
+    };
+
+    wrapper.appendChild(img);
+  });
+
+  container.appendChild(wrapper);
+
+  const check = document.createElement("button");
+  check.textContent = "Prüfen";
+  check.className = "check-btn";
+
+  check.onclick = () => {
+    if (locked) return;
+
+    attempts++;
+
+    const correctSet = item.correct;
+    const images = wrapper.querySelectorAll("img");
+
+    const isPerfect =
+      selected.length === correctSet.length &&
+      selected.every(i => correctSet.includes(i));
+
+    images.forEach((img, i) => {
+
+  const isSelected = selected.includes(i);
+  const isCorrect = correctSet.includes(i);
+
+  // 🟢 nur wenn ausgewählt UND richtig
+  if (isSelected && isCorrect) {
+    img.style.border = "5px solid #2ecc71"; // grün (dicker)
+  }
+
+  // 🔴 nur wenn ausgewählt UND falsch
+  else if (isSelected && !isCorrect) {
+    img.style.border = "5px solid #e74c3c"; // rot (dicker)
+  }
+
+  // ❌ alle anderen bleiben neutral
+  else {
+    img.style.border = "3px solid transparent";
+  }
+});
+
+    // ✅ perfekt
+    if (isPerfect) {
+      locked = true;
+
+      if (attempts === 1) {
+        score += 1;
+        showFeedback("perfect", 1);
+      } else {
+        score += 0.5;
+        showFeedback("partial", 0.5);
+      }
+      return;
+    }
+
+    // ❌ erster Versuch → Reset
+    if (attempts < 2) {
+      setTimeout(() => {
+        alert("❌ Nicht korrekt – letzter Versuch!");
+
+        selected = [];
+        images.forEach(img => {
+          img.style.border = "3px solid transparent";
+        });
+      }, 800);
+
+      return;
+    }
+
+    // ❌ endgültig falsch
+    locked = true;
+    showSolution(item);
+  };
+
+  container.appendChild(check);
+}
+
+  // CLOZE LETTERS (Buchstaben einzeln)
+if (item.type === "cloze_letters") {
+
+  let attempts = 0;
+  const maxAttempts = 2;
+
+  const parts = item.text.split("____");
+  const wrapper = document.createElement("p");
+
+  const inputs = [];
+  const inputList = [];
+
+  // wichtig: verhindert alte Inputs aus vorherigen Fragen
+  inputList.length = 0;
+
+  parts.forEach((part, i) => {
+    const span = document.createElement("span");
+    span.innerHTML = part;
+    wrapper.appendChild(span);
+
+    if (i < item.answers.length) {
+      const word = item.answers[i];
+      const wordContainer = document.createElement("span");
+
+      for (let j = 0; j < word.length; j++) {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.maxLength = 1;
+
+        input.style.width = "25px";
+        input.style.margin = "2px";
+        input.style.textAlign = "center";
+
+        // speichern für Prüfung + Navigation
+        inputs.push({ input, correct: word[j].toLowerCase() });
+        inputList.push(input);
+
+        // 👉 AUTO NEXT
+        input.addEventListener("input", () => {
+          input.value = input.value.slice(0, 1);
+
+          const index = inputList.indexOf(input);
+
+          if (input.value && inputList[index + 1]) {
+            inputList[index + 1].focus();
+          }
+        });
+
+        // 👉 BACKSPACE ZURÜCK
+        input.addEventListener("keydown", (e) => {
+          const index = inputList.indexOf(input);
+
+          if (e.key === "Backspace" && !input.value && inputList[index - 1]) {
+            inputList[index - 1].focus();
+          }
+        });
+
+        wordContainer.appendChild(input);
+      }
+
+      wrapper.appendChild(wordContainer);
+    }
+  });
+
+  container.appendChild(wrapper);
+
+  // 👉 CHECK BUTTON
+  const btn = document.createElement("button");
+  btn.textContent = "Prüfen";
+  btn.className = "check-btn";
+
+  btn.onclick = () => {
+    if (locked) return;
+
+    attempts++;
+
+    let correctCount = 0;
+
+    inputs.forEach(({ input, correct }) => {
+      const val = input.value.toLowerCase();
+
+      if (val === correct) {
+        input.style.background = "#cfe8ff";
+        correctCount++;
+      } else {
+        input.style.background = "#ffb3b3";
+      }
+    });
+
+    if (correctCount === inputs.length) {
+      locked = true;
+
+      if (attempts === 1) {
+        score += 1;
+        showFeedback("perfect", 1);
+      } else {
+        score += 0.5;
+        showFeedback("partial", 0.5);
+      }
+
+      return;
+    }
+
+    if (attempts < maxAttempts) {
+      alert("❌ Deine Lösung ist leider nicht richtig – versuch es nochmal!");
+      return;
+    }
+
+    locked = true;
+
+    let solution = "<p>Richtige Lösung:</p><ul>";
+    item.answers.forEach(a => {
+      solution += `<li>${a}</li>`;
+    });
+    solution += "</ul>";
+
+    app.innerHTML = `
+      <h2>❌ Leider falsch, die Lösung ist:</h2>
+      ${solution}
+      <button onclick="next()">Weiter</button>
+    `;
+  };
+
+  container.appendChild(btn);
+}
+
+  // LTEXT
+  if (item.type === "ltext") {
+    const q = document.createElement("h2");
+    q.textContent = item.question;
+    container.appendChild(q);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.style.width = "80%";
+    container.appendChild(input);
+
+    let ltextAttempts = 0;
+
+    const btn = document.createElement("button");
+    btn.textContent = "Prüfen";
+    btn.className = "check-btn";
+
+    btn.onclick = () => {
+      if (locked) return;
+
+      ltextAttempts++;
+
+     const userAnswer = input.value
+    .trim()
+    .toLowerCase()
+    .replace("ß", "ss");
+
+      const correctList = (item.correct ?? [])
+      .map(a => String(a ?? ""))   // verhindert undefined
+      .filter(a => a.trim() !== "")
+      .map(a => a.toLowerCase().replace("ß", "ss"));
+
+      // ✅ Prüfung
+      const isCorrect = correctList.some(correct =>
+        userAnswer === correct || userAnswer.includes(correct)
+      );
+
+      if (isCorrect) {
+      locked = true;
+      score += 1;
+      showFeedback("perfect", 1);
+      return;
+    }
+
+      if (ltextAttempts >= getMaxAttempts(item)) {
+        locked = true;
+        showSolution(item);
+      } else {
+        alert("❌ Deine Lösung ist leider nicht richtig – noch ein Versuch!");
+      }
+    };
+
+    container.appendChild(btn);
+  }
+
+  // TIMELINE
+  if (item.type === "timeline") {
+    const q = document.createElement("h2");
+    q.textContent = item.question;
+    container.appendChild(q);
+
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = item.min;
+    input.max = item.max;
+    input.value = item.min;
+
+    const display = document.createElement("p");
+    display.textContent = input.value;
+
+    input.oninput = () => display.textContent = input.value;
+
+    const btn = document.createElement("button");
+    btn.textContent = "Prüfen";
+    btn.className = "check-btn";
+
+    btn.onclick = () => {
+      if (locked) return;
+
+      const diff = Math.abs(parseInt(input.value) - item.correct);
+      locked = true;
+
+      if (diff === 0) {
+        score += 1;
+        showFeedback("perfect", 1);
+      } else if (diff <= item.tolerance) {
+        score += 0.5;
+      showPartialFeedback(item, 0.5, `Du warst nur ${diff} Jahre daneben.`);    
+      } else {
+        showSolution(item);
+      }
+    };
+
+    container.appendChild(q);
+    container.appendChild(display);
+    container.appendChild(input);
+    container.appendChild(btn);
+  }
+
+  // MATCH (DRAG & DROP VERSION)
+if (item.type === "match") {
+
+  const q = document.createElement("h2");
+  q.textContent = item.question;
+  container.appendChild(q);
+
+  const leftCol = document.createElement("div");
+  const rightCol = document.createElement("div");
+
+  leftCol.style.display = "inline-block";
+  rightCol.style.display = "inline-block";
+  rightCol.style.marginLeft = "20px";
+
+  container.appendChild(leftCol);
+  container.appendChild(rightCol);
+
+  let selectedLeft = null;
+  let matches = {};
+  let attempts = 0;
+  const maxAttempts = 2;
+
+  const colors = ["#cfe8ff", "#e6ccff", "#d6f5d6"];
+  let colorIndex = 0;
+
+  const leftButtons = [];
+  const rightButtons = [];
+
+  // LINKS
+  item.pairs.forEach(([left, right]) => {
+
+    const btn = document.createElement("button");
+    btn.textContent = left;
+    btn.className = "match-left";
+
+    btn.onclick = () => {
+      if (locked) return;
+
+      selectedLeft = left;
+
+      leftButtons.forEach(b => b.style.background = "");
+
+      btn.style.background = "#cfe8ff";
+    };
+
+    leftCol.appendChild(btn);
+    leftButtons.push(btn);
+  });
+
+  // RECHTS
+  const shuffled = [...item.pairs.map(p => p[1])]
+    .sort(() => Math.random() - 0.5);
+
+  shuffled.forEach(right => {
+
+    const btn = document.createElement("button");
+    btn.textContent = right;
+    btn.className = "match-right";
+
+    btn.onclick = () => {
+      if (locked) return;
+      if (!selectedLeft) {
+        alert("Bitte zuerst links auswählen");
+        return;
+      }
+
+      const color = colors[colorIndex++ % colors.length];
+
+      matches[selectedLeft] = right;
+
+      // links einfärben
+      leftButtons.forEach(b => {
+        if (b.textContent === selectedLeft) {
+          b.style.background = color;
+        }
+      });
+
+      // rechts einfärben
+      btn.style.background = color;
+
+      selectedLeft = null;
+    };
+
+    rightCol.appendChild(btn);
+    rightButtons.push(btn);
+  });
+
+  // CHECK
+  const check = document.createElement("button");
+  check.textContent = "Prüfen";
+
+  check.onclick = () => {
+    if (locked) return;
+
+    attempts++;
+
+    let correct = 0;
+
+    item.pairs.forEach(([l, r]) => {
+      if (matches[l] === r) correct++;
+    });
+
+    if (correct === item.pairs.length) {
+      locked = true;
+      score += attempts === 1 ? 1 : 0.5;
+      showFeedback(attempts === 1 ? "perfect" : "partial", 1);
+      return;
+    }
+
+    if (attempts < maxAttempts) {
+      alert("❌ Deine Lösung ist leider nicht richtig - versuch es nochmal!");
+      return;
+    }
+
+    locked = true;
+    showSolution(item);
+  };
+
+  container.appendChild(check);
+}
+
+
+   // SORT (DRAG & DROP)
+if (item.type === "sort") {
+
+  const q = document.createElement("h2");
+  q.textContent = item.question;
+  container.appendChild(q);
+
+  let order = shuffle([...item.items]);
+  let dragged = null;
+  let attempts = 0;
+  const maxAttempts = 2;
+
+  const list = document.createElement("div");
+
+  function renderList() {
+    list.innerHTML = "";
+
+    order.forEach((text, index) => {
+      const row = document.createElement("div");
+
+      row.innerHTML = `
+      <span style="font-size:10px;">🤚⬆️⬇️</span>
+      <span style="margin-left:12px;">${text}</span>
+    `;
+      row.style.padding = "12px";
+      row.style.margin = "6px 0";
+      row.style.background = "#f0f0f0";
+      row.style.borderRadius = "8px";
+      row.style.cursor = "grab";
+
+      row.draggable = true;
+
+      // 🔥 DRAG START
+      row.ondragstart = () => {
+        dragged = index;
+      };
+
+      // 🔥 DROP TARGET
+      row.ondragover = (e) => {
+        e.preventDefault();
+      };
+
+      row.ondrop = () => {
+        if (dragged === null) return;
+
+        const temp = order[dragged];
+        order.splice(dragged, 1);
+        order.splice(index, 0, temp);
+
+        dragged = null;
+        renderList();
+      };
+
+      list.appendChild(row);
+    });
+  }
+
+  const btn = document.createElement("button");
+  btn.textContent = "Prüfen";
+
+  btn.onclick = () => {
+
+    if (locked) return;
+
+    attempts++;
+
+    const correctOrder = item.correct.map(i => item.items[i]);
+
+    const isCorrect = JSON.stringify(order) === JSON.stringify(correctOrder);
+
+    if (isCorrect) {
+      locked = true;
+
+      if (attempts === 1) {
+        score += 1;
+        showFeedback("perfect", 1);
+      } else {
+        score += 0.5;
+        showFeedback("partial", 0.5);
+      }
+      return;
+    }
+
+    if (attempts < maxAttempts) {
+      alert("❌ Deine Lösung ist leider nicht richtig – versuch es nochmal!");
+      return;
+    }
+
+    locked = true;
+    showSolution(item);
+  };
+
+  container.appendChild(list);
+  container.appendChild(btn);
+
+  renderList();
+}
+
+  // QUIZ
+  if (item.type === "quiz") {
+    const q = document.createElement("h2");
+    q.textContent = item.question;
+    container.appendChild(q);
+
+    item.answers.forEach((answer, index) => {
+      const btn = document.createElement("button");
+      btn.className = "quiz-btn";
+      btn.textContent = answer;
+
+      btn.onclick = () => {
+      if (locked) return;
+
+      // 👉 verhindern, dass man denselben Button nochmal klickt
+      if (btn.disabled) return;
+
+      btn.disabled = true; // 🔒 Button sperren
+
+      selected.push(index);
+      attempts++;
+
+      const result = evaluate(item);
+      const maxAttempts = getMaxAttempts(item);
+
+      const buttons = container.querySelectorAll(".quiz-btn");
+
+      buttons.forEach((b, i) => {
+        if (selected.includes(i)) {
+          if (item.correct.includes(i)) {
+            b.classList.add("correct-selected");
+          } else {
+            b.classList.add("wrong-selected");
+          }
+        }
+      });
+
+      const isLastAttempt = attempts >= maxAttempts;
+
+      if (result === "perfect") {
+        locked = true;
+        score += 1;
+        showFeedback("perfect", 1);
+        return;
+      }
+
+      if (result === "partial" && isLastAttempt) {
+        locked = true;
+        score += 0.5;
+        showFeedback("partial", 0.5);
+        return;
+      }
+
+      if (result === "wrong" && isLastAttempt) {
+        locked = true;
+        showSolution(item);
+        return;
+      }
+    };
+
+      container.appendChild(btn);
+    });
+  }
+
+  app.appendChild(container);
+}
+
+render();
+</script>
+
+</body>
+</html>
